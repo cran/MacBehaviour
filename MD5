@@ -1,0 +1,15 @@
+554383ddc35b1cc6b68f460dadf0b1b3 *DESCRIPTION
+52594da2f34f3f6ed77eb14f84a88781 *NAMESPACE
+737a42e3a31059f823832e19160d58bd *R/exception_handle.R
+73b920aa4a28dba32290a57b6eef5e2b *R/experimentDesign.R
+702cb928df0ddec091857a66f120446c *R/gpt.R
+78aa681151ae7dc6f745478d45844d05 *R/loadData.R
+859d0457d5754d47543c6773a0cba9c1 *R/precheck.R
+cb7f5509dd4fbee250f630ffa17f19ed *R/runExperiment.R
+401bf351ee06f68ed335feebf5a2dc16 *R/tools.R
+da9233f5dccbfdd2435110e319cce737 *man/experimentDesign.Rd
+72e7ba21bd96b0b7fde5e69d019de1b6 *man/loadData.Rd
+adafb1c3a455e3e5bc55f258ae9874a7 *man/magicTokenizer.Rd
+e423ac75bec3fb866dea711754af56cb *man/preCheck.Rd
+9c0752087c58a768831378e7c7ed79e9 *man/runExperiment.Rd
+577ca178cc17b5d76e15f16d80da27ff *man/setKey.Rd
