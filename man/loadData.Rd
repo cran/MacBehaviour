@@ -4,21 +4,30 @@
 \alias{loadData}
 \title{Step2: Load and format data}
 \usage{
-loadData(runList, itemIDList, conditionList, promptList, header = TRUE)
+loadData(
+  runList,
+  itemList,
+  conditionList,
+  promptList,
+  header = TRUE,
+  eventList = NULL
+)
 }
 \arguments{
 \item{runList}{A numeric vector of data representing the 'Run' column in the experiment.}
 
-\item{itemIDList}{A numeric vector of data representing the 'itemID' column in the experiment.}
+\item{itemList}{A numeric vector of data representing the 'Item' column in the experiment.}
 
 \item{conditionList}{A numeric/character vector of data representing the 'Condition' column in the experiment.}
 
 \item{promptList}{A character vector of the main prompt (usually experiment items).}
 
 \item{header}{A logical value indicating if the output data.frame should include column headers (default is TRUE).}
+
+\item{eventList}{A numeric vector of data representing the 'Event' column in the experiment.}
 }
 \value{
-A data frame with the processed columns 'Run', 'Trial', 'Item', 'Condition', and 'Prompt', ready for use in experiments.
+A data frame with the processed columns 'Run', 'Event', 'Item', 'Condition', and 'Prompt', ready for use in experiments.
 }
 \description{
 Prepares the stimuli data for the experiment.
@@ -29,8 +38,9 @@ df <- data.frame(
 Run = c(1,2),
 Item = c(1,2),
 Condition = c(1,2),
-TargetPrompt = c("1","2")
+TargetPrompt = c("1","2"),
+Event = c(1,1)
 )
-ExperimentItem=loadData(df$Run,df$Item,df$Condition,promptList = df$TargetPrompt)
+ExperimentItem=loadData(df$Run,df$Item,df$Event,df$Condition,promptList = df$TargetPrompt)
 
 }

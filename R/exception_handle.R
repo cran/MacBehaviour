@@ -10,7 +10,7 @@ handle_error_code <- function(status_code) {
                         "500" = "Server error during request processing.",
                         "503" = "Engine overloaded, try again later.",
                         "404" = "check your url address",
-                        "400" = "This model connect fail.",
+                        "400" = "This request error",
                         default = "Unknown error."
   )
 

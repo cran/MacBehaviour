@@ -8,12 +8,10 @@ preCheck(
   data,
   checkToken = FALSE,
   systemPrompt = "",
-  max_tokens = 500,
-  temperature = 1,
-  top_p = 1,
-  n = 1,
   modality = "base",
-  imgDetail = "auto"
+  imgDetail = "auto",
+  version = "2023-06-01",
+  ...
 )
 }
 \arguments{
@@ -21,19 +19,15 @@ preCheck(
 
 \item{checkToken}{Whether to perform token count check, select TRUE to submit your experiment to our server's tokenizer for token count check, the default selection is FALSE (i.e., no token check will be performed, but you need to manually check if the number of tokens exceeds the model limit to avoid errors in the experiment).}
 
-\item{systemPrompt}{The system prompt text used in the chatGPT model interaction. If left empty, a space character is assumed.}
-
-\item{max_tokens}{The maximum number of tokens allowed for the model's response, default is 500.}
-
-\item{temperature}{The temperature setting for the chatGPT model, controlling randomness. Default is 0.7.}
-
-\item{top_p}{The top_p setting for the chatGPT model, controlling the diversity of responses. Default is 0.9.}
-
-\item{n}{The number of model responses per prompt, default is 1. Relevant only if 'oneTrialMode' is TRUE.}
+\item{systemPrompt}{The system prompt text used in the chatGPT model interaction. If left empty, a space character is assumed.Note: This parameter does not work in models that do not support system prompts.}
 
 \item{modality}{The default mode of GPT is "base," with "img" as an optional choice.}
 
 \item{imgDetail}{The image quality of the img modality is set to auto by default, with low/high as selectable options.}
+
+\item{version}{When using the Claude model, the version parameter required defaults to "2023-06-01".}
+
+\item{...}{Variable parameter lists allow you to input additional parameters supported by the model you're using, such as n=2 / logprobs=TRUE... Note: You must ensure the validity of the parameters you enter; otherwise, an error will occur.}
 }
 \value{
 A list containing the original data and the parameters for the chatGPT model interaction, confirming that the setup has passed the token checks or indicating issues if found.
@@ -46,15 +40,16 @@ Configures experimental parameters before execution.
 df <- data.frame(
 Run = c(1,2),
 Item = c(1,2),
+Event =c(1,1),
 Condition = c(1,2),
 TargetPrompt = c("1","2")
 )
 
-ExperimentItem=loadData(df$Run,df$Item,df$Condition,promptList = df$TargetPrompt)
+ExperimentItem=loadData(df$Run,df$Item,df$Event,df$Condition,promptList = df$TargetPrompt)
 
-Design=experimentDesign(ExperimentItem,Step=1,random = TRUE)
+Design=experimentDesign(ExperimentItem,session=1)
 
 gptConfig=preCheck(Design, systemPrompt="You are a participant in a psycholinguistic experiment",
-                    max_tokens=10,temperature=0.7,top_p=1,n=1,modality='base',imgDetail="low")
+                   modality='base',imgDetail="low",temperature=0.7)
 
 }

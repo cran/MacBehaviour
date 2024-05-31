@@ -7,29 +7,34 @@
 #' @param data The data frame containing the prompts for each trial.
 #' @param max_tokens The user-defined maximum number of tokens allowed per model response.
 #' @param systemPrompt The system-defined prompt text.
-#' @param n The number of responses per prompt, used for token calculation.
-#'
 #' @return Invisibly returns the token usage statistics and provides a warning if the token limit is exceeded for any trial.
 #' This function is intended for internal use and not exported.
 #'
 #'
 #' @noRd
-tokenCheckOne <- function (data,max_tokens,systemPrompt,n){
+tokenCheckOne <- function (data){
 
   tokens_list <- tiktokenTokenizer(data$Prompt)
   tokens_vector <- unlist(tokens_list)
-
-  token_sum = sum(tokens_vector)+ nrow(data) * n * max_tokens
   token_max = max(tokens_vector)
 
   result <- data.frame(
     CheckItem = c("item numbers", "max_token_numbers"),
-    Values = c(nrow(data),token_max)
+    Values = c(nrow(data),token_max),
+    stringsAsFactors = FALSE
   )
 
-  message(result)
+  output <- ""
+  output <- paste(output, paste(names(result), collapse = " "), "\n", sep="")
+  for (i in 1:nrow(result)) {
+    line <- paste(result[i, ], collapse = " ")
+    output <- paste(output, line, "\n", sep="")
+  }
+  message(output)
 
-  system_tokens <- tiktokenTokenizer(list(systemPrompt))[1]
+
+  # print(result)
+  # system_tokens <- tiktokenTokenizer(list(systemPrompt))[1]
 
   # warning("The max token number of Your input & output (systemPrompt+prompt+n*max_tokens) is ",(token_max+n*max_tokens+as.numeric(system_tokens))," among trails, please check the maximum token limit for the current model.")
   message("checked.")
@@ -40,19 +45,17 @@ tokenCheckOne <- function (data,max_tokens,systemPrompt,n){
 #'
 #' @description
 #' This internal function calculates the number of tokens for each prompt within individual trials in the provided data.
-#' It serves to warn if the maximum allowed token limit is exceeded for any specific trial, based on the constraints of the gpt-3.5-turbo-1106 API.
+#' It serves to warn if the maximum allowed token limit is exceeded for any specific trial, based on the constraints of the maxtoken.
 #'
-#' @import dplyr
 #' @param data The data frame containing the prompts for each trial.
 #' @param max_tokens The user-defined maximum number of tokens allowed per model response.
 #' @param systemPrompt The system-defined prompt text.
-#' @param n The number of responses per prompt, used for token calculation.
 #'
 #' @return Invisibly returns the token usage statistics and provides a warning if the token limit is exceeded for any trial.
 #' This function is intended for internal use and not exported.
 #'
 #' @noRd
-tokenCheckRun <- function (data,max_tokens,systemPrompt){
+tokenCheckRun <- function (data,systemPrompt){
   ####################################################################
   show <- data.frame(Run = numeric(0))
   session_data <- data[data$Session == 1, ]
@@ -65,13 +68,23 @@ tokenCheckRun <- function (data,max_tokens,systemPrompt){
     prompt_tokens_vector <- unlist(prompt_tokens_list)
     prompt_token_sum = sum(prompt_tokens_vector)
 
-    max_token_per_run = nrow(r_data) * (max_tokens + as.numeric(tiktokenTokenizer(list(systemPrompt))[1])) + prompt_token_sum
+    max_token_per_run = nrow(r_data) * (as.numeric(tiktokenTokenizer(list(systemPrompt))[1])) + prompt_token_sum
     new_row <- data.frame(Run = r, max_tokens_per_run = max_token_per_run)
 
     show <- rbind(show, new_row)
   }
 
-  message(show)
+  output <- ""
+
+  output <- paste(output, paste(names(show), collapse = " "), "\n", sep="")
+
+  for (i in 1:nrow(show)) {
+    line <- paste(show[i, ], collapse = " ")
+    output <- paste(output, line, "\n", sep="")
+  }
+
+  message(output)
+  # print(show)
   # warning("The max token number among runs is ",max(show$sum_tokens_per_run),",please check the maximum allowed limit for current model.")
   message("checked.")
 }
@@ -82,13 +95,11 @@ tokenCheckRun <- function (data,max_tokens,systemPrompt){
 #'
 #' @param data A data.frame that has been structured by the 'experimentDesign' function, containing the experimental setup.
 #' @param checkToken Whether to perform token count check, select TRUE to submit your experiment to our server's tokenizer for token count check, the default selection is FALSE (i.e., no token check will be performed, but you need to manually check if the number of tokens exceeds the model limit to avoid errors in the experiment).
-#' @param systemPrompt The system prompt text used in the chatGPT model interaction. If left empty, a space character is assumed.
-#' @param max_tokens The maximum number of tokens allowed for the model's response, default is 500.
-#' @param temperature The temperature setting for the chatGPT model, controlling randomness. Default is 0.7.
-#' @param top_p The top_p setting for the chatGPT model, controlling the diversity of responses. Default is 0.9.
-#' @param n The number of model responses per prompt, default is 1. Relevant only if 'oneTrialMode' is TRUE.
+#' @param systemPrompt The system prompt text used in the chatGPT model interaction. If left empty, a space character is assumed.Note: This parameter does not work in models that do not support system prompts.
 #' @param modality The default mode of GPT is "base," with "img" as an optional choice.
 #' @param imgDetail The image quality of the img modality is set to auto by default, with low/high as selectable options.
+#' @param version When using the Claude model, the version parameter required defaults to "2023-06-01".
+#' @param ... Variable parameter lists allow you to input additional parameters supported by the model you're using, such as n=2 / logprobs=TRUE... Note: You must ensure the validity of the parameters you enter; otherwise, an error will occur.
 #' @return A list containing the original data and the parameters for the chatGPT model interaction, confirming that the setup has passed the token checks or indicating issues if found.
 #' @export
 #'
@@ -97,73 +108,49 @@ tokenCheckRun <- function (data,max_tokens,systemPrompt){
 #' df <- data.frame(
 #' Run = c(1,2),
 #' Item = c(1,2),
+#' Event =c(1,1),
 #' Condition = c(1,2),
 #' TargetPrompt = c("1","2")
 #' )
 #'
-#' ExperimentItem=loadData(df$Run,df$Item,df$Condition,promptList = df$TargetPrompt)
+#' ExperimentItem=loadData(df$Run,df$Item,df$Event,df$Condition,promptList = df$TargetPrompt)
 #'
-#' Design=experimentDesign(ExperimentItem,Step=1,random = TRUE)
+#' Design=experimentDesign(ExperimentItem,session=1)
 #'
 #' gptConfig=preCheck(Design, systemPrompt="You are a participant in a psycholinguistic experiment",
-#'                     max_tokens=10,temperature=0.7,top_p=1,n=1,modality='base',imgDetail="low")
+#'                    modality='base',imgDetail="low",temperature=0.7)
 #'
 
-preCheck <- function (data, checkToken=FALSE,systemPrompt="",max_tokens=500,temperature=1.0,top_p=1,n=1,modality='base',imgDetail="auto"){
+preCheck <- function (data, checkToken=FALSE,systemPrompt="",modality='base',imgDetail="auto",version="2023-06-01",...){
 
-  if(Sys.getenv("model")=="llama" && top_p==1)
-  {
-    top_p=0.9
-  }
-  if(Sys.getenv("model")=="llama" && temperature==1)
-  {
-    temperature=0.7
-  }
+  args <- list(...)
 
-  session_data <- data[data$Session == 1, ]
-
-  if(any(duplicated(session_data$Run))){
-    oneTrialMode=FALSE
-  }else{
-    oneTrialMode=TRUE
-  }
-
-  if(n!=1 && Sys.getenv("model")=="llama")
-  {
-    stop("there is no n parameter for Llama. If you want to collect mutiple responses per item, please use step parameter in experimentDesign function.")
-  }
-
-
-  if(oneTrialMode){
+  if(Sys.getenv("exp")=="1"){
     if(checkToken){
       result <- tryCatch({
-        tokenCheckOne(data,max_tokens,systemPrompt,n)
+        tokenCheckOne(data)
       }, error = function(e) {
         warning("There was an error in token Check: Failed to connect server, but it doesn't affect continued use.")
         NULL
       })
     }
 
-    gptConfig=list(data,systemPrompt=systemPrompt,model=Sys.getenv("model"),max_tokens=max_tokens,temperature=temperature,top_p=top_p,n=n,modality=modality,imgDetail=imgDetail)
+    gptConfig <- list(data,systemPrompt=systemPrompt,modality=modality,imgDetail=imgDetail,version=version,args=args)
     return(gptConfig)
   }
 
-  else{
-    if(n>1){
-      warning("In the multi-turn dialogue mode (i.e., not the One Trial per Run model), n cannot be greater than 1; the operation will proceed with n=1.")
-    }
+  else if(Sys.getenv("exp")=="2"||Sys.getenv("exp")=="3"||Sys.getenv("exp")=="4"){
 
     if(checkToken){
       result <- tryCatch({
-        tokenCheckRun(data, max_tokens, systemPrompt)
+        tokenCheckRun(data,systemPrompt)
       }, error = function(e) {
         warning("There was an error in token Check: Failed to connect server, but it doesn't affect continued use.")
         NULL
       })
     }
 
-
-    gptConfig=list(data,systemPrompt=systemPrompt,model=Sys.getenv("model"),max_tokens=max_tokens,temperature=temperature,top_p=top_p,n=1,modality=modality,imgDetail=imgDetail)
+    gptConfig=list(data,systemPrompt=systemPrompt,modality=modality,imgDetail=imgDetail,version=version,args=args)
     return(gptConfig)
   }
 }
