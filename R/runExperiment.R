@@ -260,10 +260,7 @@ run_llama<- function(gptConfig,savePath){
   utils::setTxtProgressBar(progress_bar, current_progress)
 
 
-  column_names <- names(data)
-  new_order <- column_names[c(6,1,2,3,9,4,5,7,8,10,11,12)]
 
-  data <- data[, new_order]
 
   data$Response <- NA
   data$N <- NA
@@ -271,6 +268,12 @@ run_llama<- function(gptConfig,savePath){
   data$Message <- NA
   data$raw_Response <-NA
   data$...... <-NA
+
+  column_names <- names(data)
+  new_order <- column_names[c(6,1,2,3,9,4,5,7,8,10,11,12)]
+
+  data <- data[, new_order]
+
   wb <- createWorkbook()
   addWorksheet(wb, "Sheet1")
   writeData(wb, sheet = 1, x = t(colnames(data)), startRow = 1, startCol = 1,colNames = FALSE)
@@ -286,7 +289,7 @@ run_llama<- function(gptConfig,savePath){
       if(systemPrompt!=""){
         messages=addMessage(messages,"system", systemPrompt)
       }
-      
+
 
       message(r)
       for( it in unique(data$Item)){
@@ -564,7 +567,7 @@ run_gemini<- function(gptConfig,savePath){
 
   column_names <- names(data)
   new_order <- column_names[c(6,1,2,3,9,4,5,7,8,10,11,12)]
- 
+
   data <- data[, new_order]
 
 

@@ -1,11 +1,11 @@
-4ce54a8a3e306bd10b7141567dfd6566 *DESCRIPTION
+c058facda2425a33000d25947e3e40df *DESCRIPTION
 4b15777f5e79c6935f61835e20847e09 *NAMESPACE
 4e40b3b0a2883e7cac11e305ca1951c3 *R/exception_handle.R
 b4ca2c0605ea56edc424fe9086632f7d *R/experimentDesign.R
 8b2b8092c9a30b2e49a7b6df9886c922 *R/gpt.R
 6a1fd19e32b36f6bb91d12b5d7a348b3 *R/loadData.R
 19c7012357052bdec0e20823e8202ee4 *R/precheck.R
-3636d1e231f94290576d2ae4db3d8a55 *R/runExperiment.R
+783bd41279c1a24c046d6999f6b9b858 *R/runExperiment.R
 161b23948b198d489374b999f4f05e26 *R/tools.R
 751d2c93b50091db7603f181e989dbef *man/experimentDesign.Rd
 ec12fadd71c3af251ad96bbbb97fb22c *man/loadData.Rd
