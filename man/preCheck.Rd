@@ -8,7 +8,6 @@ preCheck(
   data,
   checkToken = FALSE,
   systemPrompt = "",
-  modality = "base",
   imgDetail = "auto",
   version = "2023-06-01",
   ...
@@ -20,8 +19,6 @@ preCheck(
 \item{checkToken}{Whether to perform token count check, select TRUE to submit your experiment to our server's tokenizer for token count check, the default selection is FALSE (i.e., no token check will be performed, but you need to manually check if the number of tokens exceeds the model limit to avoid errors in the experiment).}
 
 \item{systemPrompt}{The system prompt text used in the chatGPT model interaction. If left empty, a space character is assumed.Note: This parameter does not work in models that do not support system prompts.}
-
-\item{modality}{The default mode of GPT is "base," with "img" as an optional choice.}
 
 \item{imgDetail}{The image quality of the img modality is set to auto by default, with low/high as selectable options.}
 
@@ -42,14 +39,14 @@ Run = c(1,2),
 Item = c(1,2),
 Event =c(1,1),
 Condition = c(1,2),
-TargetPrompt = c("1","2")
+TargetPrompt = c("please repeat this sentence: test1","please repeat this sentence: test2")
 )
 
 ExperimentItem=loadData(df$Run,df$Item,df$Event,df$Condition,promptList = df$TargetPrompt)
 
 Design=experimentDesign(ExperimentItem,session=1)
 
-gptConfig=preCheck(Design, systemPrompt="You are a participant in a psycholinguistic experiment",
-                   modality='base',imgDetail="low",temperature=0.7)
+gptConfig=preCheck(Design, systemPrompt="You are a participant in a psychological experiment",
+                    imgDetail="low",temperature=0.7)
 
 }

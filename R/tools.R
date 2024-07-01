@@ -47,38 +47,27 @@
 #' @description
 #' This internal function is used to append a new message's content.
 #' @param content A character string: a new message's content
-#' @param modality A character string: If you want to use OpenAI's multimodal image model, please enter "img"; if not, there's no need to fill it in.
 #' @param imgDetail A character string: In OpenAI's multimodal model for images, the quality parameter of an image is set to "auto" by default.
 #' @return Returns the number of tokens in the provided text or stops with an error message if the API call fails.
 #'
 #' @noRd
-addContent <- function(content, modality, imgDetail) {
-  switch(modality,
-         "base" = content,
+addContent <- function(content, imgDetail) {
+  pattern <- "<text>.*?</text>|<img>.*?</img>|[^<>]+"
+  elements <- unlist(regmatches(content, gregexpr(pattern, content, perl = TRUE)))
+  content_str <- list()
+  for (element in elements) {
+    if (grepl("^<text>.*</text>$", element)) {
+      text <- gsub("</?text>", "", element)
+      content_str <- append(content_str, list(list(type = "text", text = text)))
+    } else if (grepl("^<img>.*</img>$", element)) {
+      imgUrl <- gsub("</?img>", "", element)
+      content_str <- append(content_str, list(list(type = "image_url", image_url = list(url = imgUrl, detail = imgDetail))))
+    } else {
+      content_str <- append(content_str, list(list(type = "text", text = element)))
+    }
+  }
 
-         "img" = {
-           # a="question1$$imgUrl1$$question2$$imgUrl2$$question2$$imgUrl3"
-
-           pattern <- "\\$\\$[^\\$]+\\$\\$|[^\\$]+"
-           elements <- unlist(regmatches(content, gregexpr(pattern, content)))
-           content_str=list()
-
-           # 遍历并处理每个元素
-           for (element in elements) {
-             if (grepl("^\\$\\$", element)) {
-               # 去除 $$ 并处理图片
-               imgUrl <- gsub("\\$\\$", "", element)
-               content_str=append(content_str, list(list(type = "image_url", image_url = list(url = imgUrl, detail = imgDetail))))
-             } else {
-               # 处理文本
-               content_str=append(content_str, list(list(type = "text", text = element)))
-             }
-           }
-
-           content_str
-         },
-         stop("Modality input error")
-  )
+  return(content_str)
 }
 
 #######################################addContent#############################################
@@ -103,18 +92,26 @@ addContent <- function(content, modality, imgDetail) {
 #' @param messages A list of existing messages, each as a list containing role and content.
 #' @param role A character string indicating the role for the new message.
 #' @param content A character string containing the actual text of the new message.
-#' @param modality A character string: If you want to use OpenAI's multimodal image model, please enter "img"; if not, there's no need to fill it in.
 #' @param imgDetail A character string: In OpenAI's multimodal model for images, the quality parameter of an image is set to "auto" by default.
 #' @return Returns the updated list of messages after adding the new message.
 #'
 #' @noRd
-addMessage <-function (messages,role="user",content="",modality='base',imgDetail="low"){
+addMessage <-function (messages,role="user",content="",imgDetail="low"){
 
-  if(Sys.getenv("llm")=="llama"){
+  if(Sys.getenv("llm")=="llama-2"){
     new_message <- switch(role,
-                          "system" = paste0("<s>[INST] <<SYS>>\n", content, "\n<</SYS>>\n"),
+                          "system" = paste0("<<SYS>>\n", content, "\n<</SYS>>\n\n"),
                           "user" = paste0(content, " [/INST] "),
-                          "assistant" = paste0(content, " </s><s>[INST] "),
+                          "assistant" = paste0(content, "</s>\n<s>[INST] "),
+                          ""
+    )
+    return(paste0(messages, new_message))
+  }
+  else if(Sys.getenv("llm")=="llama-3"){
+    new_message <- switch(role,
+                          "system" = paste0("<|start_header_id|>system<|end_header_id|>\n\n", content, "<|eot_id|>"),
+                          "user" = paste0("<|start_header_id|>user<|end_header_id|>\n\n",content, "<|eot_id|>\n"),
+                          "assistant" = paste0("<|start_header_id|>assistant<|end_header_id|>\n\n",substring(content, 12),"<|eot_id|>\n"),
                           ""
     )
     return(paste0(messages, new_message))
@@ -125,7 +122,7 @@ addMessage <-function (messages,role="user",content="",modality='base',imgDetail
                       list(
                         list(
                           role = role,
-                          content = addContent(content,modality,imgDetail)
+                          content = addContent(content,imgDetail)
                         )
                       )
       )
@@ -153,7 +150,6 @@ addMessage <-function (messages,role="user",content="",modality='base',imgDetail
         )
       )
     )
-    # 将新消息添加到 messages 列表
     messages <- append(messages, list(newMessage))
     return(messages)
 
@@ -196,13 +192,9 @@ addMessage <-function (messages,role="user",content="",modality='base',imgDetail
 #' @export
 setKey <- function(api_key,api_url="https://api.openai.com/v1/chat/completions",model){
   if (!is.null(api_key) && is.character(api_key)) {
-    #TODO:判断出llm
 
     if(grepl("aimlapi",tolower(api_url))){
       Sys.setenv(llm="aimlapi")
-    }
-    else if((grepl("na",tolower(api_key)))){
-      Sys.setenv(llm="custom")
     }
     else{
       if(grepl("gpt",tolower(model))){
@@ -217,8 +209,11 @@ setKey <- function(api_key,api_url="https://api.openai.com/v1/chat/completions",
       else if(grepl("gemini",tolower(model))){
         Sys.setenv(llm="gemini")
       }
+      else if(grepl("llama-3",tolower(model))){
+        Sys.setenv(llm="llama-3")
+      }
       else if(grepl("llama",tolower(model))){
-        Sys.setenv(llm="llama")
+        Sys.setenv(llm="llama-2")
       }
       else{
         Sys.setenv(llm="custom")
@@ -232,7 +227,8 @@ setKey <- function(api_key,api_url="https://api.openai.com/v1/chat/completions",
 
     switch(tolower(Sys.getenv("llm")),
            "openai" = chatgpt_test(api_key,model),
-           "llama" = llama_test(api_key,model),
+           "llama-3" = llama3_test(api_key,model),
+           "llama-2" = llama2_test(api_key,model),
            "claude"= claude_test(api_key,model),
            "gemini"= gemini_test(api_key,model),
            "baichuan"= baichuan_test(api_key,model),
@@ -268,17 +264,13 @@ chatgpt_test <- function(key,model){
     ),max_tokens = 10,temperature = 0.1,model=model)$content_list)
     message(paste("your api_key:",key))
   }
-  # else{
-  #   message(openai_completion(list(
-  #     list(
-  #       role = "user",
-  #       content = "this is a test,please say 'Setup api_key successful!'"
-  #     )
-  #   ),max_tokens = 10,temperature = 0.1,model=model)$content_list)
-  #   message(paste("your api_key:",key))
-  # }
   else{
-    message(openai_completion("this is a test,please say 'Setup api_key successful!'",max_tokens = 10,temperature = 0.1,model=model)$content_list)
+    message(openai_completion(list(
+      list(
+        role = "user",
+        content = "this is a test,please say 'Setup api_key successful!'"
+      )
+    ),max_tokens = 10,temperature = 0.1,model=model)$content_list)
     message(paste("your api_key:",key))
   }
 
@@ -295,16 +287,38 @@ chatgpt_test <- function(key,model){
 #' @return If the test is normal, it will display "Setup api_key successful!"
 #'
 #' @noRd
-llama_test <- function(key,model){
+llama2_test <- function(key,model){
   message(llama_chat("<s>[INST] <<SYS>>
-You are a helpful AI, please answer according to my requirements, do not output other irrelevant content
+You are a helpful AI, please answer according to my instruction, do not output other irrelevant content.
 <</SYS>>
 
-please say 'Setup api_key successful!' [/INST]",max_tokens = 30,temperature = 0.1)$content_list)
+please repeat: 'Setup api_key successful!' [/INST]",max_tokens = 30,temperature = 0.1)$content_list)
   message(paste("your api_key:",key))
 
-  Sys.setenv(model = "llama")
+  Sys.setenv(model = "llama-2")
 }
+
+#' Internal model test function
+#'
+#' @description
+#' This internal function is designed to verify the correctness of the API key and ensure that communication with the model is functioning properly.
+#'
+#' @param api_key A character string: the user's OpenAI/huggingface/gemini/claude/baichuan/other API key.Please fill 'NA' for self-deployed models.
+#' @param model  A character string: specify the model version.For gemini, you could input "gemini-pro"
+#' @return If the test is normal, it will display "Setup api_key successful!"
+#'
+#' @noRd
+llama3_test <- function(key,model){
+  message(llama_chat("<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+You are a helpful AI, please answer according to my instruction, do not output other irrelevant content. <|eot_id|><|start_header_id|>user<|end_header_id|>
+
+please repeat: 'Setup api_key successful!'<|eot_id|><|start_header_id|>assistant<|end_header_id|>",max_tokens = 30,temperature = 0.1)$content_list)
+  message(paste("your api_key:",key))
+  
+  Sys.setenv(model = "llama-3")
+}
+
 
 #' Internal model test function
 #'
@@ -360,20 +374,17 @@ custom_test <- function(model){
         content = "this is a test,please say 'Model test successful!'"
       )
     ),max_tokens = 10,temperature = 0.1,model=Sys.getenv("model"))$content_list)
-  }
-  #  else {
-  #   # 不包含chat
-  #   message(openai_completion(list(
-  #     list(
-  #       role = "user",
-  #       content = "this is a test,please say 'Model test successful!'"
-  #     )
-  #   ),max_tokens = 15,model=Sys.getenv("model"))$content_list)
 
-  else {
+  } else {
     # 不包含chat
-    message(openai_completion("this is a test,please say 'Model test successful!'",max_tokens = 15,model=model)$content_list)
+    message(openai_completion(list(
+      list(
+        role = "user",
+        content = "this is a test,please say 'Model test successful!'"
+      )
+    ),max_tokens = 15,model=Sys.getenv("model"))$content_list)
   }
+
 }
 
 #' Internal model test function

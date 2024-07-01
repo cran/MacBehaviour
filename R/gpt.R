@@ -3,6 +3,7 @@
 #' This internal function sends requests to the Huggingface API, initiating a conversation with llama2 . It uses specified parameters for the llama model.
 #' @import httr
 #' @import rjson
+#' @import dplyr
 #' @param messages A character strings that users want to send to llama
 #' @param ... Variable parameter lists allow you to input additional parameters supported by the model you're using. Note: You must ensure the validity of the parameters you enter; otherwise, an error will occur.
 #' @return A  character strings containing the llama's responses.
@@ -379,7 +380,7 @@ baichuan_chat <- function(
 #' @return A list of character strings containing the ChatGPT's responses.
 #' @noRd
 openai_completion <- function(
-  messages = "",
+  messages = list(),
   model = "gpt-3.5-turbo-instruct",
   ...
 ){
@@ -393,7 +394,7 @@ openai_completion <- function(
   )
 
   args <- list(
-    prompt = messages,
+    prompt = rjson::toJSON(messages),
     model = model
   )
 

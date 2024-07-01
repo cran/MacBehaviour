@@ -21,9 +21,9 @@ tokenCheckOne <- function (data){
   result <- data.frame(
     CheckItem = c("item numbers", "max_token_numbers"),
     Values = c(nrow(data),token_max),
-    stringsAsFactors = FALSE
+    stringsAsFactors = FALSE 
   )
-
+  
   output <- ""
   output <- paste(output, paste(names(result), collapse = " "), "\n", sep="")
   for (i in 1:nrow(result)) {
@@ -31,7 +31,7 @@ tokenCheckOne <- function (data){
     output <- paste(output, line, "\n", sep="")
   }
   message(output)
-
+  
 
   # print(result)
   # system_tokens <- tiktokenTokenizer(list(systemPrompt))[1]
@@ -75,7 +75,7 @@ tokenCheckRun <- function (data,systemPrompt){
   }
 
   output <- ""
-
+  
   output <- paste(output, paste(names(show), collapse = " "), "\n", sep="")
 
   for (i in 1:nrow(show)) {
@@ -96,7 +96,6 @@ tokenCheckRun <- function (data,systemPrompt){
 #' @param data A data.frame that has been structured by the 'experimentDesign' function, containing the experimental setup.
 #' @param checkToken Whether to perform token count check, select TRUE to submit your experiment to our server's tokenizer for token count check, the default selection is FALSE (i.e., no token check will be performed, but you need to manually check if the number of tokens exceeds the model limit to avoid errors in the experiment).
 #' @param systemPrompt The system prompt text used in the chatGPT model interaction. If left empty, a space character is assumed.Note: This parameter does not work in models that do not support system prompts.
-#' @param modality The default mode of GPT is "base," with "img" as an optional choice.
 #' @param imgDetail The image quality of the img modality is set to auto by default, with low/high as selectable options.
 #' @param version When using the Claude model, the version parameter required defaults to "2023-06-01".
 #' @param ... Variable parameter lists allow you to input additional parameters supported by the model you're using, such as n=2 / logprobs=TRUE... Note: You must ensure the validity of the parameters you enter; otherwise, an error will occur.
@@ -110,18 +109,18 @@ tokenCheckRun <- function (data,systemPrompt){
 #' Item = c(1,2),
 #' Event =c(1,1),
 #' Condition = c(1,2),
-#' TargetPrompt = c("1","2")
+#' TargetPrompt = c("please repeat this sentence: test1","please repeat this sentence: test2")
 #' )
 #'
 #' ExperimentItem=loadData(df$Run,df$Item,df$Event,df$Condition,promptList = df$TargetPrompt)
 #'
 #' Design=experimentDesign(ExperimentItem,session=1)
 #'
-#' gptConfig=preCheck(Design, systemPrompt="You are a participant in a psycholinguistic experiment",
-#'                    modality='base',imgDetail="low",temperature=0.7)
+#' gptConfig=preCheck(Design, systemPrompt="You are a participant in a psychological experiment",
+#'                     imgDetail="low",temperature=0.7)
 #'
 
-preCheck <- function (data, checkToken=FALSE,systemPrompt="",modality='base',imgDetail="auto",version="2023-06-01",...){
+preCheck <- function (data, checkToken=FALSE,systemPrompt="",imgDetail="auto",version="2023-06-01",...){
 
   args <- list(...)
 
@@ -135,7 +134,7 @@ preCheck <- function (data, checkToken=FALSE,systemPrompt="",modality='base',img
       })
     }
 
-    gptConfig <- list(data,systemPrompt=systemPrompt,modality=modality,imgDetail=imgDetail,version=version,args=args)
+    gptConfig <- list(data,systemPrompt=systemPrompt,imgDetail=imgDetail,version=version,args=args)
     return(gptConfig)
   }
 
@@ -150,7 +149,7 @@ preCheck <- function (data, checkToken=FALSE,systemPrompt="",modality='base',img
       })
     }
 
-    gptConfig=list(data,systemPrompt=systemPrompt,modality=modality,imgDetail=imgDetail,version=version,args=args)
+    gptConfig=list(data,systemPrompt=systemPrompt,imgDetail=imgDetail,version=version,args=args)
     return(gptConfig)
   }
 }
