@@ -528,12 +528,13 @@ run_baichuan <- function(gptConfig, savePath) {
 #' @param gptConfig A list containing the configuration for the GPT model, including the system prompt,
 #' model specifications, token settings, and experiment mode.
 #' @param savePath The file path where the experiment results will be saved in Excel format.
+#' @param log A logical value indicating whether to log the experiment results. Defaults to FALSE.
 #'
 #' @return This function does not return a value but executes the experiment scenarios and
 #' compiles the results in an Excel file. It prints "Done." to the console upon completion.
 #'
 #' @noRd
-run_LLMs <- function(gptConfig, savePath) {
+run_LLMs <- function(gptConfig, savePath, log = FALSE) {
   initializeData <- function(data) {
     data$Response <- NA
     data$N <- NA
@@ -543,6 +544,18 @@ run_LLMs <- function(gptConfig, savePath) {
     data$...... <- NA
     data <- data[, c(6, 1, 2, 3, 9, 4, 5, 7, 8, 10, 11, 12)]
     return(data)
+  }
+  url <- Sys.getenv("url")
+  # Completion
+  if (grepl("/chat/", Sys.getenv("url"))) {
+    Completion_mode = FALSE
+  } else {
+    Completion_mode = TRUE
+  }
+  
+  if (log) {
+    log_file_name <- paste0("request_log_", format(Sys.time(), "%Y-%m-%d_%H-%M-%S"), ".txt")
+    Sys.setenv(LOG_FILE = log_file_name)
   }
   
   # Create work book and sheet
@@ -569,6 +582,8 @@ run_LLMs <- function(gptConfig, savePath) {
     return(current_progress)
   }
   
+  
+  
   # Send request to models
   callModel <- function(messages, model, args) {
     # Request method list
@@ -582,17 +597,18 @@ run_LLMs <- function(gptConfig, savePath) {
     )
     chat_request <- model_request[[Sys.getenv("llm")]]$chat
     completion_request <- model_request[[Sys.getenv("llm")]]$completion
-    # message(chat_request)
-    
     repeat {
       result <- tryCatch({
-        if (grepl("chat", Sys.getenv("url"))) {
+        if (Completion_mode != TRUE) {
+          # message("run_LLMs_model: ",model)
+          # message("run_LLMs_chat_request: ",chat_request)
           result_list <- do.call(chat_request, modifyList(list(
             messages = messages, model = model
           ), args))
         } else {
+          message("callModel: ",messages)
           result_list <- do.call(completion_request, modifyList(list(
-            messages = messages, model = model
+            prompt = messages, model = model
           ), args))
         }
         # message(result_list$content_list)
@@ -648,7 +664,13 @@ run_LLMs <- function(gptConfig, savePath) {
     csvFlag <- TRUE
   }
   
-  total_iterations <- nrow(data) * n
+        
+  if (grepl("^sk", Sys.getenv("key"))&&Completion_mode == FALSE) {
+      total_iterations <- nrow(data) * n
+    } else {
+      total_iterations <- nrow(data)
+    }
+
   current_progress <- 0
   progress_bar <- utils::txtProgressBar(min = 0, max = total_iterations, style = 3)
   utils::setTxtProgressBar(progress_bar, current_progress)
@@ -689,35 +711,49 @@ run_LLMs <- function(gptConfig, savePath) {
   
   # Beginning message
   ## ToDo: Add more models' beginning message
+
   Beginning_messages_list <- list(openai = list(),
                                   "llama-2" = "<s>[INST] ",
                                   "llama-3" = "<|begin_of_text|>")
-  Beginning_messages <- Beginning_messages_list[[Sys.getenv("llm")]]
+  if (Completion_mode == T) {
+    Beginning_messages <- Beginning_messages_list[[Sys.getenv("llm")]]
+  } else {
+    Beginning_messages <-list()
+  }
   
   for (s in unique(data$Session)) {
     s_data <- data[data$Session == s, ]
     for (r in unique(data$Run)) {
       r_data <- s_data[s_data$Run == r, ]
       # Beginning message
+      #message(2222)
       messages <- Beginning_messages
-      if (systemPrompt != "") {
+      if (systemPrompt != "" && Completion_mode != TRUE) {
         messages <- addMessage(messages, system, systemPrompt)
       }
       # message(r)
       for (it in unique(data$Item)) {
         it_data <- r_data[r_data$Item == it, ]
         for (i in seq_len(nrow(it_data))) {
-          messages <- addMessage(messages, user, it_data$Prompt[i], imgDetail)
+          
+          if (Completion_mode != TRUE) {
+            messages <- addMessage(messages, user, it_data$Prompt[i], imgDetail)
+          }else {
+            messages <- it_data$Prompt[i]
+          }
           t_data <- it_data[i, ]
-          # message(messages)
+          # message("run_LLMs_before_callmodel: ",messages)
           result <- callModel(messages, model, args)
+          # message(result)
           content_list <- result$content_list
           raw_temp <- result$raw_response
+          message("run_LLMs_content_list: ",content_list)
           
           for (nr in seq_along(content_list)) {
             t_data$Response <- handle_response(content_list[nr])
+            # message("run_LLMs_Response: ",t_data$Response)
             t_data$N <- nr
-            if (n == 1) {
+            if (n == 1 && Completion_mode != TRUE) {
               messages <- addMessage(messages, assistant, content_list[nr])
             }
             cMessage <- paste(messages, collapse = " ")
@@ -757,4 +793,5 @@ run_LLMs <- function(gptConfig, savePath) {
   saveResults(wb, savePath, csvFlag)
   close(progress_bar)
   message("Done.")
+  closeAllConnections()
 }

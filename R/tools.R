@@ -51,24 +51,31 @@
 #' @return Returns the number of tokens in the provided text or stops with an error message if the API call fails.
 #'
 #' @noRd
-addContent <- function(content, imgDetail) {
-  pattern <- "<text>.*?</text>|<img>.*?</img>|[^<>]+"
-  elements <- unlist(regmatches(content, gregexpr(pattern, content, perl = TRUE)))
-  content_str <- list()
-  for (element in elements) {
-    if (grepl("^<text>.*</text>$", element)) {
-      text <- gsub("</?text>", "", element)
-      content_str <- append(content_str, list(list(type = "text", text = text)))
-    } else if (grepl("^<img>.*</img>$", element)) {
-      imgUrl <- gsub("</?img>", "", element)
-      content_str <- append(content_str, list(list(type = "image_url", image_url = list(url = imgUrl, detail = imgDetail))))
-    } else {
-      content_str <- append(content_str, list(list(type = "text", text = element)))
+  addContent <- function(content, imgDetail = "auto") {
+    # message("addContent_input: ", content)
+    pattern <- "<text>.*?</text>|<img>.*?</img>|[^<>]+"
+    elements <- unlist(regmatches(content, gregexpr(pattern, content, perl = TRUE)))
+    content_str <- list()
+    
+    contains_image <- FALSE
+    for (element in elements) {
+      if (grepl("^<img>.*</img>$", element)) {
+        imgUrl <- gsub("</?img>", "", element)
+        content_str <- append(content_str, list(list(type = "image_url", image_url = list(url = imgUrl, detail = imgDetail))))
+        contains_image <- TRUE
+      } 
+      else {
+        text <- gsub("</?text>", "", element)
+        content_str <- append(content_str, list(list(type = "text", text = text)))
+      }
     }
+    
+    if (!contains_image) {
+      return(paste(sapply(content_str, function(x) x$text), collapse = " "))
+    }
+    
+    return(content_str)
   }
-
-  return(content_str)
-}
 
 #######################################addContent#############################################
 
@@ -97,6 +104,7 @@ addContent <- function(content, imgDetail) {
 #'
 #' @noRd
 addMessage <-function (messages,role="user",content="",imgDetail="low"){
+  
 
   if(Sys.getenv("llm")=="llama-2"){
     new_message <- switch(role,
@@ -129,11 +137,12 @@ addMessage <-function (messages,role="user",content="",imgDetail="low"){
     return(messages)
   }
   else if ((Sys.getenv("llm")=="baidubce")){
+    message(content)
     messages <- append(messages,
                        list(
                        list(
                            role = role,
-                           content = addContent(content)[[1]][["text"]]
+                           content = addContent(content)
                        )
     ))
 
@@ -189,37 +198,70 @@ addMessage <-function (messages,role="user",content="",imgDetail="low"){
 #' This function allows users to set and verify an API key for data collection. You can change the default api_url for others models' API.
 #'
 #'
-#' @param api_key A character string: the user's OpenAI/huggingface/gemini/claude/baichuan/other API key.Please fill 'NA' for self-deployed models.
-#' @param api_url A character string: the user's OpenAI/huggingface/gemini/claude/baichuan/other url .default is OpenAI. for gemini, you just input "https://generativelanguage.googleapis.com/"
-#' @param model  A character string: specify the model version.For gemini, you could input "gemini-pro"
+#' @param api_key A character string: the user's OpenAI/huggingface/gemini/claude/baichuan/other API key. Please fill 'NA' for self-deployed models.
+#' @param model  A character string: specify the model version. For gemini, you could input "gemini-pro"
+#' @param api_url A character string: the API URL for the model. If not specified, the default Chat completion URL will be used based on the api_key.
+#' @param ... Additional arguments to be passed (currently not used, but kept for future extensibility).
 #' @return Prints a message to the console indicating whether the API key setup was successful.
 #' If the setup fails, the function stops with an error message.
 #'
 #' @examples
 #' \dontrun{
-#' set_key(api_key="YOUR_API_KEY", api_url="api.openai.com/v1/chat/completions",model="gpt-3.5-turbo")
+#' set_key(api_key="YOUR_API_KEY", model="gpt-3.5-turbo", api_url="api.openai.com/v1/chat/completions")
 #' }
 #' @export
-setKey <- function(api_key,api_url="https://api.openai.com/v1/chat/completions",model,...){
-  args <- list(...)
+setKey <- function(api_key,model,api_url = NULL,...){
+  log_file_name <- paste0("request_log_", format(Sys.time(), "%Y-%m-%d_%H-%M-%S"), ".txt")
+  Sys.setenv(LOG_FILE = log_file_name)
   
+  args <- list(...)
   if (!is.null(api_key) && is.character(api_key)) {
-
-    if(grepl("aimlapi",tolower(api_url))){
-      Sys.setenv(llm="aimlapi")
+    # AI/ML API
+    if(nchar(api_key)==32){
+      Sys.setenv(llm="openai")
+      # if api_url is empty
+      if (is.null(api_url)) {
+        Sys.setenv(url="https://api.aimlapi.com/v1/chat/completions")
+      }
+      else{
+        Sys.setenv(url=api_url)
+      }
     }
     else{
-      if(grepl("openai",tolower(api_url))){
-        Sys.setenv(llm="openai")
-      }
-      else if(grepl("baidubce",tolower(api_url))){
-        Sys.setenv(llm="baidubce")
+      # OpenAI or Huggingface
+      if (grepl("^hf|^sk", api_key) && !grepl("-ant-", api_key)) {
+        Sys.setenv(llm = "openai")
+        if (grepl("hf", api_key)) {
+          if (is.null(api_url)) {
+            Sys.setenv(url = paste0("https://api-inference.huggingface.co/models/", model, "/v1/chat/completions"))
+          } else {
+            Sys.setenv(url = api_url)
+          }
+        } else {
+          if (is.null(api_url)) {
+            Sys.setenv(url = "https://api.openai.com/v1/chat/completions")
+          } else {
+            Sys.setenv(url = api_url)
+          }}}
+      # Baidu
+      else if (!is.null(args[["secret_key"]])) {
+        Sys.setenv(llm = "baidubce")
+        if (is.null(api_url)) {
+          Sys.setenv(url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/")
+        } else {
+          Sys.setenv(url = api_url)
+        }
       }
       else if(grepl("baichuan",tolower(model))){
         Sys.setenv(llm="baichuan")
       }
       else if(grepl("claude",tolower(model))){
         Sys.setenv(llm="claude")
+        if (is.null(api_url)) {
+          Sys.setenv(url = "https://api.anthropic.com/v1/messages")
+        } else {
+          Sys.setenv(url = api_url)
+        }
       }
       else if(grepl("gemini",tolower(model))){
         Sys.setenv(llm="gemini")
@@ -234,29 +276,63 @@ setKey <- function(api_key,api_url="https://api.openai.com/v1/chat/completions",
         Sys.setenv(llm="custom")
       }
     }
-
+    
+    message("setKey: ",Sys.getenv("llm"))
 
     Sys.setenv(key=api_key)
-    Sys.setenv(url=api_url)
+    # Sys.setenv(url=api_url)
     Sys.setenv(model=model)
+    # message(Sys.getenv("llm"))
     if (!is.null(args[["secret_key"]])){
       Sys.setenv(secret_key = args[["secret_key"]])
       }
     
-
-    switch(tolower(Sys.getenv("llm")),
-           #"openai" = chatgpt_test(api_key,model),
-           "openai" = c(openai_chat()$content_list,model),
-           "baidubce" = c(wenxin_chat()$content_list,model),
-           "llama-3" = llama3_test(api_key,model),
-           "llama-2" = llama2_test(api_key,model),
-           "claude"= claude_test(api_key,model),
-           "gemini"= gemini_test(api_key,model),
-           "baichuan"= baichuan_test(api_key,model),
-           "custom"= custom_test(model),
-           "aimlapi"=aimlapi_test(api_key,model),
-           stop("Failed to the interact with the LLM.")
+    model_request <- list(
+      openai = list(chat = "openai_chat", completion = "openai_completion"),
+      "llama-3" = list(chat = "llama_chat", completion = "llama_chat"),
+      "llama-2" = list(chat = "llama_chat", completion = "llama_chat"),
+      baidubce = list(chat = "wenxin_chat", completion = "wenxin_chat"),
+      claude = list(chat = "claude_chat", completion = "claude_chat"),
+      gemini = list(chat = "gemini_chat", completion = "gemini_chat"),
+      baichuan = list(chat = "baichuan_chat", completion = "baichuan_chat"),
+      custom = list(chat = "openai_chat", completion = "openai_completion")
+      # example_model = list(chat = "example_chat_function", completion = "example_completion_function")
     )
+    chat_request <- model_request[[Sys.getenv("llm")]]$chat
+    completion_request <- model_request[[Sys.getenv("llm")]]$completion
+    # message(chat_request)
+    if (grepl("/chat/", Sys.getenv("url"))|grepl("/message", Sys.getenv("url"))) {
+      message("chat completion mode")
+      message("setKey: ",chat_request)
+      message(c(do.call(chat_request, modifyList(list(
+        model = model
+      ), args))$content_list,"  Model - ",model))
+      
+    } else {
+      tryCatch({
+        message("text completion mode")
+        result <- do.call(completion_request, modifyList(list(
+          model = model
+        ), args))
+        message(paste("Setup successful", " Model - ", model))
+      }, error = function(e) {
+        message("An error occurred:", e$message)
+      })
+    }
+
+    # switch(tolower(Sys.getenv("llm")),
+    #        #"openai" = chatgpt_test(api_key,model),
+    #        "openai" = message(c(openai_chat()$content_list,"  Model:",model)),
+    #        "baidubce" = c(wenxin_chat()$content_list,model),
+    #        "llama-3" = llama3_test(api_key,model),
+    #        "llama-2" = llama2_test(api_key,model),
+    #        "claude"= claude_test(api_key,model),
+    #        "gemini"= gemini_test(api_key,model),
+    #        "baichuan"= baichuan_test(api_key,model),
+    #        "custom"= custom_test(model),
+    #        "aimlapi"=aimlapi_test(api_key,model),
+    #        stop("Failed to the interact with the LLM.")
+    # )
   }
   else {
     stop("Failed to the interact with the LLM.")
@@ -309,11 +385,7 @@ chatgpt_test <- function(key,model){
 #'
 #' @noRd
 llama2_test <- function(key,model){
-  message(llama_chat("<s>[INST] <<SYS>>
-You are a helpful AI, please answer according to my instruction, do not output other irrelevant content.
-<</SYS>>
-
-Please repeat 'Setup successful'. DON'T say anything else at the beginning of your reponse. [/INST]",max_tokens = 30,temperature = 0.1)$content_list)
+  message(llama_chat("Please repeat 'Setup successful'. DON'T say anything else at the beginning of your reponse.",max_tokens = 30,temperature = 0.1)$content_list)
   message(paste("your api_key:",key))
 
   Sys.setenv(model = "llama-2")
