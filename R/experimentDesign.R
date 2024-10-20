@@ -49,6 +49,11 @@ experimentDesign <-function(data,session=1,randomItem=FALSE,randomEvent=FALSE){
     stop("error design in your exp data, plz check it.")
   }
 
+  # forbid NA in Item and Run
+  if (any(is.na(data$Item)) || any(is.na(data$Run))) {
+    stop("Item and Run cannot have NA values, please check your data.")
+  }
+  
   switch(Sys.getenv("exp"),
          "1" = message("Exp mode : One trial per run"),
          "2" = message("Exp mode : One trial per run"),
@@ -73,11 +78,9 @@ experimentDesign <-function(data,session=1,randomItem=FALSE,randomEvent=FALSE){
           item_values <- unique(subset$Item)
           item_counts <- table(subset$Item)
           randomized_item_order <- sample(item_values)
-          reordered_counts <- item_counts[as.character(randomized_item_order)]
-          new_items <- rep(randomized_item_order, times = reordered_counts)
-          randomized_items[df$Run == run] <- new_items
+          subset_new <- subset[order(match(subset$Item, randomized_item_order)), ]
+          session_data[df$Run == run, ] <- subset_new
         }
-        session_data$Item <- randomized_items
       }
       }
       if (randomEvent) {
@@ -94,7 +97,6 @@ experimentDesign <-function(data,session=1,randomItem=FALSE,randomEvent=FALSE){
 
           randomized_events[subset_indices] <- sample(df$Event[subset_indices])
         }
-
 
         session_data$Event <- randomized_events
 

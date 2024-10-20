@@ -13,30 +13,38 @@
 # MacBehaviour: Conduct Psychological Experiments on LLMs
 
 </div>
-<img width="859" alt="image" src="https://github.com/user-attachments/assets/08b8327d-20d7-4a17-ab0a-15b5c65033b2">
-
+<img width="837" alt="image" src="https://github.com/user-attachments/assets/93b6c073-ca3e-4821-961a-c552b977e6d0">
 
 
 
 <br><br>
-The `MacBehaviour` R package offers a user-friendly toolkit for conducting  psychological experiments on over 100 Large langauge models(LLMs) in a few lines.
 
-Please visit <a href="https://github.com/xufengduan/MacBehaviour">here</a> for the latest information.
+**IMPORTANT: Please visit <a href="https://github.com/xufengduan/MacBehaviour">this link</a> for the latest information.**
+
+The `MacBehaviour`(short for Machine Behaviour) R package offers a user-friendly toolkit for conducting  psychological experiments on over 100 Large langauge models(LLMs) in a few lines.
+
+****
+
+**Since Hugging Face offers free inference services for certain models, you can begin experimenting with this package via [Demo Code - HuggingFace](#demo-code---hugging-face).**
 
 For details and citation, please see the preprint: <a href="https://arxiv.org/abs/2405.07495"> Duan, X., Li, S., & Cai, Z. G. (2024). MacBehaviour: An R package for behavioural experimentation on large language models. </a>
 
-<div id="installing-and-loading-necessary-packages" class="section level3">
+Please pilot test your experiment before running it, as we are not responsible for any potential losses incurred.
 
+<div id="installing-and-loading-necessary-packages" class="section level3">
 ## News
 
-2024-Sep-5: Support logging Logprobs for Chat models on Hugging Face.<br>
-2024-July-2: Support models on Qianfan Baidu (百度千帆大模型平台).
+2024-Oct-16: Package paper accepted by Behavior Research Methods.<br>
+2024-Sep-5: Support logging Logprobs for Chat models on Hugging Face via Message API.<br>
+2024-July-2: Support models on Qianfan Baidu.<br>
 
 ## Table of Contents
 - [Supported Model Platforms](#supported-model-platforms)
 - [Supported Models](#supported-models)
 - ⭐️[Installation](#installation)
-- ⭐️[Demo Code](#demo-code)
+- ⭐️[Demo Code - HuggingFace](#demo-code---hugging-face)
+- ⭐️[Demo Code - OpenAI](#demo-code---openai)
+- ⭐️[Demo Code - Qianfan Baidu](#Demo-Code---Qianfan-Baidu)
 - [Tutorial](#tutorial)
   - [1. Communicate with Models](#1-communicate-with-models)
   - [2. Experiment Design](#2-experiment-design)
@@ -70,15 +78,23 @@ If you prefer using cloud-based models, this package currently supports the foll
 | 50+  other self-hosted LLMs  (e.g.,  Vicuna, FastChat-T5) | FastChat (Zheng  et al., 2023)    |
 | 200+ other cloud-hosted LLMs	                            | AI/ML API (AI/ML API, 2024)       |
 
+## Note
+对于在中国内地的研究者，如果使用代理，请在脚本中添加
+```R
+Sys.setenv(https_proxy = "http://127.0.0.1:XXXX")
+```
+其中XXXX为代理端口号，了解 <a href = "https://github.com/xufengduan/MacBehaviour/blob/main/Materials/proxy_issue.md">如何获得端口号</a>。<br>
+
+由于地区限制可能无法使用 OpenAI 和 Hugging Face的，可以查看 [Demo Code - Qianfan Baidu](#Demo-Code---Qianfan-Baidu)。千帆平台除了文心模型以外，还支持一些开源模型，并且提供免费的api调用。但需要提前注册<br>
 
 ## Installation
 
-There are two ways for installing this package: from Git hub or CRAN
+There are two ways for installing this package: from Github or CRAN
 
 ```R
 # From github
 install.packages("devtools")
-devtools::install_github("xufengduan/MacBehaviour")
+devtools::install_github("xufengduan/MacBehaviour", upgrade = "never")
 
 ```
 
@@ -96,27 +112,145 @@ Upon the successful installation, users can load this package into the current R
 ``` R
 library("MacBehaviour")
 ```
-## Demo Code
+## Demo Code - Hugging Face
+
+We have provided two demonstration scripts for you to try: one for models hosted on Hugging Face and another for models from OpenAI.
+
+**Since Hugging Face offers free inference services for certain models, we recommend starting your experimentation with Hugging Face before using OpenAI.**
+
+If you want to learn more about this package, please refer to the detailed [tutorial](#tutorial).
+
+1. Install and load the package. You can skip it if you have already done it.
 ```R
-# Communicate with LLMs (refer to the tutorial for instructions on obtaining the API key)
-setKey(api_key = "YOUR_API_KEY", model = "MODEL_ID") 
-
-# Load the stimuli (experimental design is based on specific columns in the stimuli file)
-# Example data can be found in the Material folder (https://github.com/xufengduan/MacBehaviour/tree/main/Materials)
-df = read.xlsx("Data_OTPR.xlsx")
-
-# Standardize the data frame
-ExperimentItem = loadData(runList = df$Run, itemList = df$Item, eventList = df$Event, conditionList = df$Condition, promptList = df$Prompt)
-
-# Input experiment-specific parameters here
-Design = experimentDesign(ExperimentItem, session = 1, randomItem = FALSE)
-
-# Input model-specific parameters here
-gptConfig = preCheck(systemPrompt = "You are a participant in a psychological experiment.", data = Design, n = 3, max_tokens = 2)
-
-# Run the experiment!
-runExperiment(gptConfig, savePath = "./demo.xlsx")
+install.packages("devtools")
+devtools::install_github("xufengduan/MacBehaviour", upgrade = "never")
+library("MacBehaviour")
 ```
+2. Communicate with one LLM.
+<br><br>
+Replace `YOUR_API_KEY` to you personal API key. For more information on obtaining API keys for different platforms, refer to this <a href="https://github.com/xufengduan/MacBehaviour/blob/main/Materials/get_api_keys.md">documentation</a>.
+<br><br>
+For the model ID, you can use `Qwen/Qwen2.5-72B-Instruct` (currently free). If it doesn't work, try selecting a free model one by one from <a href="https://huggingface.co/models?inference=warm&other=conversational,text-generation-inference&sort=trending">this list of HuggingFace models</a>. You might need to <a href="https://huggingface.co/subscribe/pro">subscribe PRO</a> for access to more advanced models(e.g., Llama 3.2 families).
+```R
+setKey(api_key = "your_api_key_here", model = "Qwen/Qwen2.5-72B-Instruct")
+```
+
+3. Load Data: organizes your experimental data from a data frame.
+<br><br>
+You can find the demo data <a href = "https://github.com/xufengduan/MacBehaviour/blob/main/Materials/Data_OTPR.xlsx">here</a>. If you want to learn more details, please refer to this [tutorial](#tutorial)
+
+```R
+df <- read.xlsx("./Data_OTPR.xlsx")  # Load your data file
+ExperimentItem <- loadData(runList = df$Run, itemList = df$Item, conditionList = df$Condition, promptList = df$Prompt)
+```
+4. Set Experimental Design.
+```R
+Design <- experimentDesign(ExperimentItem, session = 1, randomItem = FALSE)
+```
+5. Configures model parameters. You can find more parameters <a href = "https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client#huggingface_hub.InferenceClient.chat_completion">here</a>.
+```R
+gptConfig <- preCheck( data = Design, systemPrompt = "You are a participant in a psychology experiment.", max_tokens = 500)
+```
+6. Run the Experiment.
+```R
+runExperiment(gptConfig, savePath = "demo_results.csv")
+```
+## Demo Code - OpenAI
+
+This script provides an example of how to use OpenAI models with the MacBehaviour package.
+
+If you want to learn more about this package, please refer to the [tutorial](#tutorial).
+
+1. Install and load the package. you can skip it if you have already done it.
+```R
+install.packages("devtools")
+devtools::install_github("xufengduan/MacBehaviour", upgrade = "never")
+library("MacBehaviour")
+```
+2. Communicate with one LLM: authenticates API access for the models you are working with.
+<br><br>
+Replace `YOUR_API_KEY` to you personal API key. For more information on obtaining API keys for different platforms, refer to this <a href="https://github.com/xufengduan/MacBehaviour/blob/main/Materials/get_api_keys.md">documentation</a>.
+<br><br>
+For the model ID, you can use `gpt-3.5-turbo` or choose from <a href="https://platform.openai.com/docs/models">this list of OpenAI models</a>.
+```R
+setKey(api_key = "your_api_key_here", model = "gpt-3.5-turbo")
+```
+
+3. Load Data: organizes your experimental data from a data frame.
+<br><br>
+You can find the demo data <a href = "https://github.com/xufengduan/MacBehaviour/blob/main/Materials/Data_OTPR.xlsx">here</a>. If you want to learn more details, please refer to this [tutorial](#tutorial)
+
+```R
+df <- read.xlsx("./Data_OTPR.xlsx")  # Load your data file
+ExperimentItem <- loadData(runList = df$Run, itemList = df$Item, conditionList = df$Condition, promptList = df$Prompt)
+```
+4. Set Experimental Design.
+```R
+Design <- experimentDesign(ExperimentItem, session = 1, randomItem = FALSE)
+```
+5. Configures model parameters.
+You can find more parameters <a href = "https://platform.openai.com/docs/api-reference/chat/create">here</a>.
+```R
+gptConfig <- preCheck( data = Design, systemPrompt = "You are a participant in a psychology experiment.", max_tokens = 500)
+```
+6. Run the Experiment.
+```R
+runExperiment(gptConfig, savePath = "demo_results.csv")
+```
+
+# Demo Code - Qianfan Baidu
+
+We have provided a demonstration script for models hosted on Baidu's Qianfan platform. You can begin by experimenting with free models such as `Yi-34B-Chat`, or choose from other models like the Meta-Llama and Mixtral families.
+
+For more details on obtaining API and secret keys, refer to [this guide](https://cloud.baidu.com/doc/WENXINWORKSHOP/s/dlv4pct3s). To browse available models, check [this list](https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Nlks5zkzu#%E5%AF%B9%E8%AF%9Dchat). Be aware that some models require payment for usage, as explained [here](https://cloud.baidu.com/doc/WENXINWORKSHOP/s/hlrk4akp7#%E6%8C%89%E9%87%8F%E5%90%8E%E4%BB%98%E8%B4%B9).
+
+
+1. Install and load the package. You can skip this if it’s already installed.
+
+```r
+install.packages("devtools")
+devtools::install_github("xufengduan/MacBehaviour", upgrade = "never")
+library("MacBehaviour")
+```
+
+2. Communicate with one LLM: authenticate API access for the models you are working with.
+
+Replace `your_api_key_here` and `your_secret_key_here` with your personal API and secret keys. For more information on obtaining API and secret keys, refer to [this documentation](https://cloud.baidu.com/doc/WENXINWORKSHOP/s/dlv4pct3s).
+
+For the model ID, you can use `Yi-34B-Chat` (currently free) or select from models like Meta-Llama and Mixtral families [here](https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Nlks5zkzu#%E5%AF%B9%E8%AF%9Dchat).
+
+```r
+setKey(api_key = "your_api_key_here", secret_key = "your_secret_key_here", model = "Yi-34B-Chat")
+```
+
+3. Load Data: organizes your experimental data from a data frame.
+
+You can find the demo data [here](https://github.com/xufengduan/MacBehaviour/blob/main/Materials/Data_OTPR.xlsx). For more details, please refer to the [tutorial](#tutorial).
+
+```r
+df <- read.xlsx("./Data_OTPR.xlsx")  # Load your data file
+ExperimentItem <- loadData(runList = df$Run, itemList = df$Item, conditionList = df$Condition, promptList = df$Prompt)
+```
+
+4. Set Experimental Design.
+
+```r
+Design <- experimentDesign(ExperimentItem, session = 1, randomItem = FALSE)
+```
+
+5. Configure model parameters.
+
+```r
+gptConfig <- preCheck(data = Design, systemPrompt = "You are a participant in a psychology experiment.", max_tokens = 500)
+```
+
+6. Run the Experiment.
+
+```r
+runExperiment(gptConfig, savePath = "demo_results.csv")
+```
+
+
 
 ## Tutorial
 ### 1\. Communicate with Models
@@ -131,13 +265,19 @@ Authenticate with LLMs using an API key.
     
     ## "Setup api_key successful!"
 
-Arguments: Replace `YOUR_OPENAI_API_KEY` and  `YOUR_MODEL` with your personal key and selected model index.
+Arguments: Replace `YOUR_API_KEY` and  `YOUR_MODEL` with your personal key and selected model index.
 
-1) The "api_key" argument, required, needs the user's personal API (Application Programming Interface) from OpenAI, Hugging Face, or other companies. If users are using a self-hosted model, please enter "NA." API enables authenticated access to language models. Researchers interested in obtaining OpenAI API key should first sign up on the OpenAI platform (https://platform.openai.com/). After registration, navigate to user’s account settings where user can generate personal API key. Similarly, for Hugging Face models, an API key specific to Hugging Face is required. This can be obtained by creating an account on the Hugging Face platform (https://huggingface.co/). Once you are logged in, access your account settings, and find the "access token" to generate Hugging Face API key. Please note that model inference requires computational resources, and users may need to pay for inference costs. You can find pricing details for OpenAI (https://openai.com/pricing) and Hugging Face (https://huggingface.co/blog/inference-pro). 
+1) The "api_key" argument, required, needs the user's personal API (Application Programming Interface) from OpenAI, Hugging Face, or other companies. If users are using a self-hosted model, please enter "NA." For more information on obtaining API keys for different platforms, refer to this <a href="https://github.com/xufengduan/MacBehaviour/blob/main/Materials/get_api_keys.md">documentation</a>.
 
-2) The "model" argument, required, a character vector, specifies the index of the selected model. For OpenAI models, you can find the list of available model indexes here: (https://platform.openai.com/account/limits). For Hugging Face models, the model name corresponds to the repository name (e.g., meta-llama/Llama-2-13b-hf). A list of available models can be found (https://huggingface.co/models?inference=warm&other=text-generation-inference&sort=trending). For self-hosted models, users can find the model's name at the model’s corresponding repository (for a summary, see https://github.com/lm-sys/FastChat/blob/main/docs/model_support.md).
+2) The "model" argument, required, a character vector, specifies the index of the selected model.
+<br><br>
+For OpenAI models, you can find the list of available model indexes <a href="https://platform.openai.com/account/limits">here</a>.
+<br><br>
+For Hugging Face models, the model name corresponds to the repository name (e.g., meta-llama/Llama-2-13b-hf). A list of available models can be found <a href="https://huggingface.co/models?inference=warm&other=conversational,text-generation-inference&sort=trending">here</a>. You might need to <a href="https://huggingface.co/subscribe/pro">subscribe PRO</a> for access to more advanced models(e.g., Llama 3.1 families).
+<br><br>
+For self-hosted models, users can find the model's name at the model’s corresponding repository (for a summary, see <a href="https://github.com/lm-sys/FastChat/blob/main/docs/model_support.md">here</a>).
 
-3) The "api_url" argument, optional, a character vector, specifies the interface domain of the selected model. By default, the system will automatically determine the appropriate URL based on the user’s "api_key". Users can still specify a custom api_url, which will take precedence. For experiments using the GPT family, the URLs are documented in OpenAI's API reference (https://platform.openai.com/docs/api-reference/authentication). For Llama models available through Hugging Face, the model’s URL can be found in the respective model’s repository, such as " https://api-inference.huggingface.co/models/meta-llama/Llama-2-70b-chat-hf". For self-hosted models, please fill this argument with the user’s local URL ("for more information, see https://github.com/lm-sys/FastChat/blob/main/docs/openai_api.md).
+4) The "api_url" argument, optional, a character vector, specifies the interface domain of the selected model. By default, the system will automatically determine the appropriate URL based on the user’s "api_key". Users can still specify a custom api_url, which will take precedence. For experiments using the GPT family, the URLs are documented in <a href="https://platform.openai.com/docs/api-reference/authentication">OpenAI's API reference</a>. For Llama models available through Hugging Face, the model’s URL can be found in the respective model’s repository, such as " https://api-inference.huggingface.co/models/meta-llama/Llama-2-70b-chat-hf". For self-hosted models, please fill this argument with the user’s local URL (for more information, see <a href = "https://github.com/lm-sys/FastChat/blob/main/docs/openai_api.md">here</a>).
 
 </div>
 
@@ -172,7 +312,9 @@ People tend to use a masculine pronoun for names ending in a closed syllable (e.
 
 In our demo, we ask an LLM to complete sentence fragments and observe how the model refers to the novel personal name (e.g., using masculine pronouns such as *he/him/his* or feminine ones such as *she/her/hers*).
 
-1. **multiple-trials-per-run design**,
+
+<em>**3.1 multiple-trials-per-run design**</em>
+
 Before using this package, users should prepare one Excel/CSV file/data frame containing the experimental stimuli and other information for experiment design (see Table 1).
 
 
@@ -210,7 +352,7 @@ In each Run, the package will send the stimulus based on the index of row. Users
 
    There are two roles in the context: "user" (for sending stimuli) and "assistant" (as a participant to provide responses). To achieve the above conversation, this package sends the stimuli in the following format for OpenAI GPT series/open-source models and Llama2:
 
-    
+​    
 
    ```r
    # OpenAI/Open-source models
@@ -230,17 +372,18 @@ In each Run, the package will send the stimulus based on the index of row. Users
    list (role = "user", content = " Please repeat the fragment and complete it into a full sentence: Because Steban was very careless …")]
    ```
 
-    
+​    
 
-   The conversational context was provided as the beginning of the next trial’s prompt. In this example, the context included the first stimulus *Please repeat the fragment and complete it into a full sentence: Although Pelcra was sick …* and its response *Although Pelcra was sick, she remained determined to finish her project on time.* The prompt then presented the second stimulus *Please repeat the fragment and complete it into a full sentence: Because Steban was very careless …* after the conversational context. We implemented this function for Llama-2-chat-hf series in the same way (see more at [https://Huggingface.co/blog/llama2#how-to-prompt-llama-2](https://huggingface.co/blog/llama2#how-to-prompt-llama-2)). 
+   The conversational context was provided as the beginning of the next trial’s prompt. In this example, the context included the first stimulus *Please repeat the fragment and complete it into a full sentence: Although Pelcra was sick …* and its response *Although Pelcra was sick, she remained determined to finish her project on time.* The prompt then presented the second stimulus *Please repeat the fragment and complete it into a full sentence: Because Steban was very careless …* after the conversational context. We implemented this function for Llama-2-chat-hf series in the same way (see <a href="https://huggingface.co/blog/llama2#how-to-prompt-llama-2">here</a> for details). 
 
-    
+​    
 
-2. **One-trial-per-run Design**
+<em>**3.2 One-trial-per-run Design**</em>
 
     In the one-trial-per-run design, an LLM will be presented only one trial of the experiment in a Run/conversation. In our demo experiment (see Table 3), for instance, each conversation with the LLM involves only one stimulus. In this design, each stimulus is given a unique Run number, indicating that each one is to be presented in a separate conversation with the LLM. This design eliminates the potential for previous context to influence the response of current stimulus, ensuring that each stimulus is evaluated independently.
 
-    
+
+​    
 
    **Table 3**. **Stimuli for one-trial-per-run design**
 
@@ -255,13 +398,12 @@ In each Run, the package will send the stimulus based on the index of row. Users
    | 7       | 4        | Open syllable   | Please repeat the fragment and complete it  into a full sentence: Before Bontee went to college … |
    | 8       | 4        | Closed syllable | Please repeat the fragment and complete it  into a full sentence: Before Bonteed went to college … |
 
-    
+​    
 
 Load your stimuli from an Excel file.
 
     df = read.xlsx("/path/to/excel/demo.xlsx")
 
-The "read.xlsx" function from the "openxlsx" package reads the Excel file, converting it into a data frame within R. You can also import a data frame containing stimuli and experiment information through other functions. To accurately present the stimuli within the R environment, the "loadData" function is utilized, which organized the data from a data frame for further processing:
 
 <table>
 <thead>
@@ -316,9 +458,9 @@ The output of this function, "ExperimentItem", is a data frame generated by "loa
 <div id="model-parameters" class="section level3">
 
 
-3. **Model Parameters**
+<em>**3.3 Model Parameters**</em>
 
-The model parameters are configured to guide the behaviour of the model during the experiment in the "preCheck" function:
+The model parameters are configured to guide the behaviour of the model during the experiment in the "preCheck" function(for HuggingFace models see <a href = "https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client#huggingface_hub.InferenceClient.chat_completion">here</a>; for OpenAI models, please see <a href = "https://platform.openai.com/docs/api-reference/chat/create">here</a>):
 
  
 
@@ -328,7 +470,7 @@ gptConfig = preCheck (data = Design, checkToken = F, systemPrompt = "You are a p
 
  
 
-1)"data", required, a data frame, is the output of experimentDesign function.
+1) "data", required, a data frame, is the output of experimentDesign function.
 
 2) The "systemPrompt", optional, a character vector, offers a task instruction to the model analogous to the instructions given to participants in a psychological experiment. Should one wish to convey the instructions to the model through the trial prompt, one could leave this parameter blank or state some general instructions (e.g., "You are a participant in a psychological experiment, please follow the task instruction carefully"). By default, it is empty. If not, the package will send the systemPrompt content at the start of each run.
 
@@ -358,26 +500,28 @@ gptConfig = preCheck (data = Design, checkToken = F, systemPrompt = "You are a p
     # 2 		2016
     # …
     ```
-    
+   
     In the report for multiple-trials-per-run design, the package computes the input for the last trial of a run—incorporating all previous conversation history—based on the maximum token count. This is calculated as (systemPrompt + max_tokens) × number of trials + previous conversation history + tokens from the last item; it then reports this total for each run. Please make sure that the max token per run does not exceed the token limit of your selected LLM. The following is an example report. 
 
-5) The "logprobs", optional, a boolean vector, specifies whether to return the log probabilities of output tokens in the chat completion mode. It appends the log probability for each token in the response under the "rawResponse" column. Additionally, users can define how many top probable tokens to display at each token position by introducing a numeric vector “top_logprobs” (https://platform.openai.com/docs/api-reference/chat/create#chat-create-logprobs), which ranges from 0 to 20, showing their corresponding log probabilities. Please note that "logprobs" must be active for this feature to work. Setting it to 2 returns the two most likely tokens at that position. For instance, if "logprobs" is set to TRUE and "top_logprobs" is set to 2, a generated response might be: “Hello! How can I assist you today?” For the first token “Hello”, two alternatives are provided:
+5) The "logprobs", optional, a boolean vector, specifies whether to return the log probabilities of output tokens in the chat completion mode. It appends the log probability for each token in the response under the "rawResponse" column. Additionally, users can define how many top probable tokens to display at each token position by introducing a numeric vector “top_logprobs”, which ranges from 0 to 20 (for <a href="https://platform.openai.com/docs/api-reference/chat/create#chat-create-logprobs"> OpenAI GPT families</a> only, for HuggingFace models see <a href = "https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client#huggingface_hub.InferenceClient.chat_completion">here</a>), showing their corresponding log probabilities. Please note that "logprobs" must be active for this feature to work. Setting it to 2 returns the two most likely tokens at that position. For instance, if "logprobs" is set to TRUE and "top_logprobs" is set to 2, a generated response might be: “Hello! How can I assist you today?” For the first token “Hello”, two alternatives are provided:
 
 ``` {"top_logprobs": [{"token": "Hello", "logprob": -0.31725305}, {"token": "Hi", "logprob": -1.3190403}]}```
 
 - This configuration also provides the two most probable tokens and their respective log probabilities for each subsequent token position. 
-In the text completion mode (detailed in section "api_url" part in session 2 .1) in the GPT family, "logprobs" is limited to a numeric vector with a maximum value of 5; hence, users don’t need to specify candidates by "top_logprobs" (https://platform.openai.com/docs/api-reference/completions/create#completions-create-logprobs). For self-hosted models, currently, only text completion supports collecting token probabilities by setting logprobs to True. This randomly returns one token and its probability at a time, but users can continue requesting until they receive the desired token.
+In the text completion mode (detailed in "api_url" part in [Communicate with Models](#1-communicate-with-models)) in the GPT family, "logprobs" is limited to a numeric vector with a maximum value of 5;  For self-hosted models, currently, only text completion supports collecting token probabilities by setting logprobs to True. This randomly returns one token and its probability at a time, but users can continue requesting until they receive the desired token.
 
 6) imgDetail, optional, offers three settings for image input: low, high, or auto. This allows users to control the model's image processing and textual interpretation. By default, the model operates in "auto" mode, automatically selecting between low and high settings based on the input image size (see more for https://platform.openai.com/docs/guides/vision/low-or-high-fidelity-image-understanding). If inputs do not include images, please skip this parameter.
 
-7) The "temperature", optional, a numeric vector, controls the creativity in LLM’s responses (https://platform.openai.com/docs/api-reference/chat/create#chat-create-temperature). 
+7) The <a href="https://platform.openai.com/docs/api-reference/chat/create#chat-create-temperature">"temperature"</a>, optional, a numeric vector, controls the creativity in LLM’s responses. 
 
-8) The "n", optional, a numeric vector, determines how many unique and independent responses are produced by the model for a single trial. For example, if n = 20, users will get 20 unique responses for each request. However, in a multiple-trials-per-run design, this parameter is automatically disabled to prevent branching conversations (https://platform.openai.com/docs/api-reference/chat/create#chat-create-n). 
-In addition to the parameters mentioned above, users can also enter optional ones. For reference, you can consult OpenAI's documentation (https://platform.openai.com/docs/api-reference/chat/create) or that of the selected model.
+8) The <a href="https://platform.openai.com/docs/api-reference/chat/create#chat-create-n">"n"</a>, optional, a numeric vector, determines how many unique and independent responses are produced by the model for a single trial. For example, if n = 20, users will get 20 unique responses for each request. However, in a multiple-trials-per-run design, this parameter is automatically disabled to prevent branching conversations.
+   
+
+In addition to the parameters mentioned above, users can also enter optional ones(for HuggingFace models see <a href = "https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client#huggingface_hub.InferenceClient.chat_completion">here</a>; for OpenAI models, please see <a href = "https://platform.openai.com/docs/api-reference/chat/create">here</a>).
 
 <div id="run-the-experiment" class="section level3">
 
-4. **Run the Experiment**
+<em>**3.4 Run the Experiment**</em>
 
 1. The "runExperiment" function is the execution phase of data collection. It initiates the interaction with an LLM based on the specified design and parameters, and iteratively collects responses to the stimuli.
 
@@ -400,11 +544,8 @@ runExperiment (gptConfig, savePath = "./demo.xlsx")
 
 Upon the completion of the experiment, the responses are compiled into a file. This file consists of multiple columns including Run, ItemID, Condition, Prompt, the corresponding response from the LLM and other information. The output file typically has the following columns:
 
- 
 
- 
-
-**Table 6**. The data structure of output file.
+**Table 4**. The data structure of output file.
 
 | **Column**    | **Description**                                            |
 | ------------- | ---------------------------------------------------------- |

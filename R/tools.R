@@ -1,3 +1,5 @@
+
+#######################################Tokenizer#############################################
 #' magicTokenizer
 #'
 #' @description
@@ -83,12 +85,6 @@
 
 
 
-
-
-
-
-
-
 #######################################addMessage############################################
 #' Internal Message Adder
 #'
@@ -137,7 +133,7 @@ addMessage <-function (messages,role="user",content="",imgDetail="low"){
     return(messages)
   }
   else if ((Sys.getenv("llm")=="baidubce")){
-    message(content)
+    #message(content)
     messages <- append(messages,
                        list(
                        list(
@@ -161,16 +157,13 @@ addMessage <-function (messages,role="user",content="",imgDetail="low"){
     return(messages)
   }
   else if((Sys.getenv("llm")=="gemini")){
-    newMessage <- list(
+      newMessage <- list(
       role = role,
       parts = list(
-        list(
-          text = content
-        )
+        text = unlist(content)
       )
     )
     messages <- append(messages, list(newMessage))
-    return(messages)
 
     return(messages)
   }
@@ -215,6 +208,7 @@ setKey <- function(api_key,model,api_url = NULL,...){
   Sys.setenv(LOG_FILE = log_file_name)
   
   args <- list(...)
+  tryCatch({
   if (!is.null(api_key) && is.character(api_key)) {
     # AI/ML API
     if(nchar(api_key)==32){
@@ -266,18 +260,17 @@ setKey <- function(api_key,model,api_url = NULL,...){
       else if(grepl("gemini",tolower(model))){
         Sys.setenv(llm="gemini")
       }
-      else if(grepl("llama-3",tolower(model))){
-        Sys.setenv(llm="llama-3")
-      }
-      else if(grepl("llama",tolower(model))){
-        Sys.setenv(llm="llama-2")
-      }
+      
       else{
         Sys.setenv(llm="custom")
+        if (is.null(api_url)) {
+          stop("Error: API URL cannot be NULL for custom models.")
+        }
+        Sys.setenv(url = api_url)
       }
     }
     
-    message("setKey: ",Sys.getenv("llm"))
+    # message("setKey: ",Sys.getenv("llm"))
 
     Sys.setenv(key=api_key)
     # Sys.setenv(url=api_url)
@@ -303,10 +296,25 @@ setKey <- function(api_key,model,api_url = NULL,...){
     # message(chat_request)
     if (grepl("/chat/", Sys.getenv("url"))|grepl("/message", Sys.getenv("url"))) {
       message("chat completion mode")
-      message("setKey: ",chat_request)
-      message(c(do.call(chat_request, modifyList(list(
-        model = model
-      ), args))$content_list,"  Model - ",model))
+      # message("setKey: ",chat_request)
+      # message(c(do.call(chat_request, modifyList(list(
+      #   model = model
+      # ), args))$content_list,"  Model - ",model))
+      result <- tryCatch(
+        c(do.call(chat_request, modifyList(list(
+          model = model
+        ), args))),
+        error = function(e) {
+          return(e)
+        }
+      )
+      
+      if (length(result$content_list) == 0) {
+        message(result)
+        stop("Error: Failed to interact with the LLM.")
+      } else {
+        message(result$content_list, "  Model - ", model)
+      }
       
     } else {
       tryCatch({
@@ -320,23 +328,14 @@ setKey <- function(api_key,model,api_url = NULL,...){
       })
     }
 
-    # switch(tolower(Sys.getenv("llm")),
-    #        #"openai" = chatgpt_test(api_key,model),
-    #        "openai" = message(c(openai_chat()$content_list,"  Model:",model)),
-    #        "baidubce" = c(wenxin_chat()$content_list,model),
-    #        "llama-3" = llama3_test(api_key,model),
-    #        "llama-2" = llama2_test(api_key,model),
-    #        "claude"= claude_test(api_key,model),
-    #        "gemini"= gemini_test(api_key,model),
-    #        "baichuan"= baichuan_test(api_key,model),
-    #        "custom"= custom_test(model),
-    #        "aimlapi"=aimlapi_test(api_key,model),
-    #        stop("Failed to the interact with the LLM.")
-    # )
+
   }
   else {
     stop("Failed to the interact with the LLM.")
   }
+}, error = function(e) {
+  message("An error occurred:", e$message)
+})
 }
 
 #######################################setkey############################################
@@ -469,7 +468,7 @@ custom_test <- function(model){
     ),max_tokens = 10,temperature = 0.1,model=Sys.getenv("model"))$content_list)
 
   } else {
-    # 不包含chat
+    # not include chat
     message(openai_completion(list(
       list(
         role = "user",
